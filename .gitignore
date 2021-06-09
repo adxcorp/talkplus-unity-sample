@@ -1,0 +1,7 @@
+*.meta
+iOS
+*.apk
+Library
+obj
+Temp
+Logs
