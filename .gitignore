@@ -4,3 +4,8 @@ Library
 obj
 Temp
 Logs
+
+.vs/
+.vsconfig
+*.csproj
+*.sln
