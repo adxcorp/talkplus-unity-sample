@@ -1,8 +1,15 @@
-﻿using System;
+﻿//#define FIREBASE_MESSAGING
+
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TalkPlus;
+
+#if FIREBASE_MESSAGING
+using Firebase;
+using Firebase.Messaging;
+#endif
 
 public class TalkPlusSample : MonoBehaviour
 {
@@ -78,10 +85,18 @@ public class TalkPlusSample : MonoBehaviour
     Button inviteDoneButton;
     #endregion
 
+#if FIREBASE_MESSAGING
+    static readonly string KEY_FCM_TOKEN = "KeyFCMToken";
+    FirebaseApp app;
+#endif
+
     void Start()
     {
         Initialize();
         InitializeComponent();
+#if FIREBASE_MESSAGING
+        InitializeFirebase();
+#endif
     }
 
     void Update()
@@ -114,7 +129,7 @@ public class TalkPlusSample : MonoBehaviour
 
     void Initialize()
     {
-        TalkPlusApi.Init("88610f18-a4f0-43f8-ae41-3127d1d4a53b");
+        TalkPlusApi.Init("875bd0c3-83eb-4086-b7ba-a1a8b05a26fe");
     }
 
     void InitializeComponent()
@@ -269,6 +284,9 @@ public class TalkPlusSample : MonoBehaviour
             {
                 if (tpUser != null)
                 {
+#if FIREBASE_MESSAGING
+                    RegisterFCMToken();
+#endif
                     PlayerPrefs.SetString(KEY_USER_ID, userId);
                     PlayerPrefs.SetString(KEY_USER_NAME, userName);
 
@@ -643,4 +661,52 @@ public class TalkPlusSample : MonoBehaviour
         }
     }
     #endregion
+
+#if FIREBASE_MESSAGING
+    #region Firebase
+    void InitializeFirebase()
+    {
+        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
+        {
+            var dependencyStatus = task.Result;
+            if (dependencyStatus == DependencyStatus.Available)
+            {
+                app = FirebaseApp.DefaultInstance;
+                FirebaseMessaging.TokenReceived += OnTokenReceived;
+                FirebaseMessaging.MessageReceived += OnMessageReceived;
+            }
+            else
+            {
+                Debug.Log("Could not resolve all Firebase dependencies: " + dependencyStatus);
+            }
+        });
+    }
+
+    void RegisterFCMToken()
+    {
+        string fcmToken = PlayerPrefs.GetString(KEY_FCM_TOKEN);
+
+        if (!string.IsNullOrEmpty(fcmToken))
+        {
+            TalkPlusApi.RegisterFCMToken(fcmToken, () => {
+          
+            }, (errorCode, error) => { });
+        }
+    }
+
+    public static void OnTokenReceived(object sender, TokenReceivedEventArgs token)
+    {
+        string fcmToken = token.Token;
+        PlayerPrefs.SetString(KEY_FCM_TOKEN, fcmToken);
+    }
+
+    public static void OnMessageReceived(object sender, MessageReceivedEventArgs e)
+    {
+        if (e.Message.Data.ContainsKey("talkplus"))
+        {
+            TalkPlusApi.ProcessFirebaseCloudMessagingData(e.Message.Data);
+        }
+    }
+    #endregion
+#endif
 }
