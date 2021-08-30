@@ -449,7 +449,7 @@ public class TalkPlusSample : MonoBehaviour
         {
             AddMessageToList(tpMessage);
             MarkRead();
-            ScrollToBottom();
+            Invoke(nameof(ScrollToBottom), 0.05f);
         }
     }
 
