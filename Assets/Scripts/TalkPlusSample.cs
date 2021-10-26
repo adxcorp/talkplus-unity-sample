@@ -2,8 +2,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 using TalkPlus;
 
 #if FIREBASE_MESSAGING
@@ -11,13 +13,11 @@ using Firebase;
 using Firebase.Messaging;
 #endif
 
-public class TalkPlusSample : MonoBehaviour
-{
+public class TalkPlusSample : MonoBehaviour {
     static readonly string KEY_USER_ID = "KeyUserId";
     static readonly string KEY_USER_NAME = "KeyUserName";
 
-    enum PANEL_TYPE
-    {
+    enum PANEL_TYPE {
         LOGIN, MAIN, CHANNEL
     }
 
@@ -51,7 +51,7 @@ public class TalkPlusSample : MonoBehaviour
     Scrollbar scrollbar;
 
     InputField messageInputField;
-    Button sendButton;
+    Button fileButton, sendButton;
 
     public GameObject messageItemPrefab;
     List<GameObject> messageList = new List<GameObject>();
@@ -59,8 +59,7 @@ public class TalkPlusSample : MonoBehaviour
     #endregion
 
     #region Menu
-    enum MENU_TYPE
-    {
+    enum MENU_TYPE {
         PRIVATE, PUBLIC, INVITATION_CODE, JOIN_PUBLIC, JOIN_INVITATION_CODE
     }
     MENU_TYPE menuType;
@@ -90,8 +89,7 @@ public class TalkPlusSample : MonoBehaviour
     FirebaseApp app;
 #endif
 
-    void Start()
-    {
+    void Start() {
         Initialize();
         InitializeComponent();
 #if FIREBASE_MESSAGING
@@ -99,18 +97,15 @@ public class TalkPlusSample : MonoBehaviour
 #endif
     }
 
-    void Update()
-    {
+    void Update() {
         Rect rect = Screen.safeArea;
 
-        if (rect != safeAreaRect)
-        {
+        if (rect != safeAreaRect) {
             ApplySafeArea(rect);
         }
     }
 
-    void ApplySafeArea(Rect rect)
-    {
+    void ApplySafeArea(Rect rect) {
         safeAreaRect = rect;
 
         Rect screenSafeArea = Screen.safeArea;
@@ -127,13 +122,11 @@ public class TalkPlusSample : MonoBehaviour
         rectTransform.anchorMax = newAnchorMax;
     }
 
-    void Initialize()
-    {
+    void Initialize() {
         TalkPlusApi.Init("875bd0c3-83eb-4086-b7ba-a1a8b05a26fe");
     }
 
-    void InitializeComponent()
-    {
+    void InitializeComponent() {
         #region Login UI
         loginPanel = GameObject.Find("TalkPlusSample/SafeArea/LoginPanel");
         userIdInputField = GameObject.Find("TalkPlusSample/SafeArea/LoginPanel/UserIdInputField").GetComponent<InputField>();
@@ -161,15 +154,16 @@ public class TalkPlusSample : MonoBehaviour
         channelContent = GameObject.Find("TalkPlusSample/SafeArea/ChannelPanel/ScrollView/Viewport/Content").GetComponent<RectTransform>();
         scrollbar = GameObject.Find("TalkPlusSample/SafeArea/ChannelPanel/ScrollView/Scrollbar").GetComponent<Scrollbar>();
         messageInputField = GameObject.Find("TalkPlusSample/SafeArea/ChannelPanel/Send/MessageInputField").GetComponent<InputField>();
+        fileButton = GameObject.Find("TalkPlusSample/SafeArea/ChannelPanel/Send/FileButton").GetComponent<Button>();
         sendButton = GameObject.Find("TalkPlusSample/SafeArea/ChannelPanel/Send/SendButton").GetComponent<Button>();
 
-        channelBackButton.onClick.AddListener(() =>
-        {
+        channelBackButton.onClick.AddListener(() => {
             ResetMessageList();
             TalkPlusApi.OnMessageReceived -= OnMessageReceived;
             SetActivePanel(PANEL_TYPE.MAIN);
         });
         channelCloseButton.onClick.AddListener(() => { LeaveChannel(); });
+        fileButton.onClick.AddListener(() => { SendFileMessage(); });
         sendButton.onClick.AddListener(() => { SendMessage(); });
         #endregion
 
@@ -195,8 +189,7 @@ public class TalkPlusSample : MonoBehaviour
         userId3InputField = GameObject.Find("TalkPlusSample/SafeArea/MenuPopup/Popup/Content/Invite/UserId3InputField").GetComponent<InputField>();
         inviteDoneButton = GameObject.Find("TalkPlusSample/SafeArea/MenuPopup/Popup/Content/Invite/InviteDoneButton").GetComponent<Button>();
 
-        menuBackButton.onClick.AddListener(() =>
-        {
+        menuBackButton.onClick.AddListener(() => {
             menuBackButton.gameObject.SetActive(false);
             menuTitleText.text = "Menu";
             menuPanel.SetActive(true);
@@ -208,10 +201,8 @@ public class TalkPlusSample : MonoBehaviour
         menu3Button.onClick.AddListener(() => { SetMenuType(MENU_TYPE.INVITATION_CODE); });
         menu4Button.onClick.AddListener(() => { SetMenuType(MENU_TYPE.JOIN_PUBLIC); });
         menu5Button.onClick.AddListener(() => { SetMenuType(MENU_TYPE.JOIN_INVITATION_CODE); });
-        inviteDoneButton.onClick.AddListener(() =>
-        {
-            switch (menuType)
-            {
+        inviteDoneButton.onClick.AddListener(() => {
+            switch (menuType) {
                 case MENU_TYPE.PRIVATE:
                     CreateChannel(TPChannel.TYPE_PRIVATE);
                     break;
@@ -238,10 +229,8 @@ public class TalkPlusSample : MonoBehaviour
         SetActivePanel(PANEL_TYPE.LOGIN);
     }
 
-    void SetActivePanel(PANEL_TYPE type)
-    {
-        switch (type)
-        {
+    void SetActivePanel(PANEL_TYPE type) {
+        switch (type) {
             case PANEL_TYPE.LOGIN:
                 loginPanel.SetActive(true);
                 mainPanel.SetActive(false);
@@ -269,21 +258,16 @@ public class TalkPlusSample : MonoBehaviour
 
     #region Login
 
-    void ShowLogin()
-    {
+    void ShowLogin() {
         string userId = PlayerPrefs.GetString(KEY_USER_ID);
         string userName = PlayerPrefs.GetString(KEY_USER_NAME);
         Login(userId, userName);
     }
 
-    void Login(string userId, string userName)
-    {
-        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userName))
-        {
-            TalkPlusApi.LoginWithAnonymous(userId, userName, null, null, (TPUser tpUser) =>
-            {
-                if (tpUser != null)
-                {
+    void Login(string userId, string userName) {
+        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userName)) {
+            TalkPlusApi.LoginWithAnonymous(userId, userName, null, null, (TPUser tpUser) => {
+                if (tpUser != null) {
 #if FIREBASE_MESSAGING
                     RegisterFCMToken();
 #endif
@@ -300,17 +284,13 @@ public class TalkPlusSample : MonoBehaviour
     #endregion
 
     #region Main
-    void GetChannelList(TPChannel lastChannel = null)
-    {
-        if (lastChannel == null)
-        {
+    void GetChannelList(TPChannel lastChannel = null) {
+        if (lastChannel == null) {
             ResetChannelList();
         }
 
-        TalkPlusApi.GetChannelList(lastChannel, (List<TPChannel> tpChannels) =>
-        {
-            foreach (TPChannel tpChannel in tpChannels)
-            {
+        TalkPlusApi.GetChannelList(lastChannel, (List<TPChannel> tpChannels) => {
+            foreach (TPChannel tpChannel in tpChannels) {
                 GameObject channelObject = Instantiate(channelItemPrefab, mainContent.transform) as GameObject;
                 ListItem channelItem = channelObject.GetComponent<ListItem>();
 
@@ -318,15 +298,12 @@ public class TalkPlusSample : MonoBehaviour
                 channelItem.userText.text = "참여자: " + usersText;
 
                 TPMessage message = tpChannel.GetLastMessage();
-                if (message != null && message.GetText().Length > 0)
-                {
+                if (message != null && message.GetText().Length > 0) {
                     channelItem.messageText.text = message.GetText();
                     long createAt = message.GetCreatedAt();
                     string date = GetFormattedTime(createAt);
                     channelItem.dateText.text = "date: " + date;
-                }
-                else
-                {
+                } else {
                     channelItem.messageText.text = "no message";
                     channelItem.dateText.text = "date: ";
                 }
@@ -335,8 +312,7 @@ public class TalkPlusSample : MonoBehaviour
                 channelItem.unreadCountText.text = unreadCount;
                 channelList.Add(channelObject);
 
-                channelObject.GetComponent<Button>().onClick.AddListener(() =>
-                {
+                channelObject.GetComponent<Button>().onClick.AddListener(() => {
                     ResetChannelList();
                     SetActivePanel(PANEL_TYPE.CHANNEL);
                     ShowChannel(tpChannel);
@@ -348,20 +324,16 @@ public class TalkPlusSample : MonoBehaviour
         }, (int statusCode, Exception e) => { });
     }
 
-    void ResetChannelList()
-    {
-        foreach (GameObject item in channelList)
-        {
+    void ResetChannelList() {
+        foreach (GameObject item in channelList) {
             Destroy(item);
         }
 
         channelList.Clear();
     }
 
-    void Logout()
-    {
-        TalkPlusApi.Logout(() =>
-        {
+    void Logout() {
+        TalkPlusApi.Logout(() => {
             PlayerPrefs.SetString(KEY_USER_ID, null);
             PlayerPrefs.SetString(KEY_USER_NAME, null);
 
@@ -374,8 +346,7 @@ public class TalkPlusSample : MonoBehaviour
     #endregion
 
     #region Channel
-    void ShowChannel(TPChannel tpChannel)
-    {
+    void ShowChannel(TPChannel tpChannel) {
         channel = tpChannel;
         channelUserText.text = GetAttendees(tpChannel);
 
@@ -385,28 +356,21 @@ public class TalkPlusSample : MonoBehaviour
         GetMessageList();
     }
 
-    void MarkRead()
-    {
-        TalkPlusApi.MarkAsReadChannel(channel, (TPChannel tpChannel) =>
-        {
+    void MarkRead() {
+        TalkPlusApi.MarkAsReadChannel(channel, (TPChannel tpChannel) => {
             channel = tpChannel;
 
         }, (int statusCode, Exception e) => { });
     }
 
-    void GetMessageList(TPMessage lastMessage = null)
-    {
-        if (channel != null)
-        {
-            if (lastMessage == null)
-            {
+    void GetMessageList(TPMessage lastMessage = null) {
+        if (channel != null) {
+            if (lastMessage == null) {
                 ResetMessageList();
             }
 
-            TalkPlusApi.GetMessageList(channel, lastMessage, (List<TPMessage> tpMessages) =>
-            {
-                if (tpMessages != null && tpMessages.Count > 0)
-                {
+            TalkPlusApi.GetMessageList(channel, lastMessage, (List<TPMessage> tpMessages) => {
+                if (tpMessages != null && tpMessages.Count > 0) {
                     tpMessages.Reverse();
                     foreach (TPMessage tpMessage in tpMessages) { AddMessageToList(tpMessage); }
 
@@ -416,19 +380,32 @@ public class TalkPlusSample : MonoBehaviour
         }
     }
 
-    void ResetMessageList()
-    {
-        foreach (GameObject item in messageList)
-        {
+    void ResetMessageList() {
+        foreach (GameObject item in messageList) {
             Destroy(item);
         }
         messageList.Clear();
     }
 
-    void AddMessageToList(TPMessage tpMessage)
-    {
-        if (tpMessage != null)
-        {
+    async Task<Texture2D> GetRemoteTexture(string url) {
+        UnityWebRequest request = UnityWebRequestTexture.GetTexture(url);
+        UnityWebRequestAsyncOperation asyncOperation = request.SendWebRequest();
+
+        while (asyncOperation.isDone == false)
+            await Task.Delay(1000 / 30);
+
+        if (request.isNetworkError || request.isHttpError) {
+#if DEBUG
+            Debug.Log($"{request.error}, URL:{request.url}");
+#endif
+            return null;
+        } else {
+            return DownloadHandlerTexture.GetContent(request);
+        }
+    }
+
+    async void AddMessageToList(TPMessage tpMessage) {
+        if (tpMessage != null) {
             GameObject messageObject = Instantiate(messageItemPrefab, channelContent.transform) as GameObject;
             ListItem messageItem = messageObject.GetComponent<ListItem>();
 
@@ -437,30 +414,43 @@ public class TalkPlusSample : MonoBehaviour
             messageItem.dateText.text = GetFormattedTime(tpMessage.GetCreatedAt());
             int unreadCount = channel.GetMessageUnreadCount(tpMessage);
             messageItem.unreadCountText.text = unreadCount > 0 ? unreadCount.ToString() : null;
+
+            string fileUrl = tpMessage.GetFileUrl();
+            if (!string.IsNullOrEmpty(fileUrl)) {
+                Texture2D texture = await GetRemoteTexture(fileUrl);
+                messageItem.fileImage.texture = texture;
+                messageItem.fileImage.SetNativeSize();
+            }
             messageList.Add(messageObject);
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(channelContent);
         }
     }
 
-    void AddMessage(TPMessage tpMessage)
-    {
-        if (tpMessage != null)
-        {
+    void AddMessage(TPMessage tpMessage) {
+        if (tpMessage != null) {
             AddMessageToList(tpMessage);
             MarkRead();
             Invoke(nameof(ScrollToBottom), 0.05f);
         }
     }
 
-    void SendMessage()
-    {
+    void SendFileMessage() {
+        string filePath = Application.dataPath + "/Resources/logo.png";
         string message = messageInputField.text;
 
-        if (!string.IsNullOrEmpty(message))
-        {
-            TalkPlusApi.SendMessage(channel, message, TPMessage.TYPE_TEXT, null, (TPMessage tpMessage) =>
-            {
+        TalkPlusApi.SendFileMessage(channel, message, TPMessage.TYPE_TEXT, null, filePath, (TPMessage tpMessage) => {
+            messageInputField.text = null;
+            AddMessage(tpMessage);
+
+        }, (int statusCode, Exception e) => { });
+    }
+
+    void SendMessage() {
+        string message = messageInputField.text;
+
+        if (!string.IsNullOrEmpty(message)) {
+            TalkPlusApi.SendMessage(channel, message, TPMessage.TYPE_TEXT, null, (TPMessage tpMessage) => {
                 messageInputField.text = null;
                 AddMessage(tpMessage);
 
@@ -468,10 +458,8 @@ public class TalkPlusSample : MonoBehaviour
         }
     }
 
-    void LeaveChannel()
-    {
-        TalkPlusApi.LeaveChannel(channel, true, () =>
-        {
+    void LeaveChannel() {
+        TalkPlusApi.LeaveChannel(channel, true, () => {
             ResetMessageList();
             TalkPlusApi.OnMessageReceived -= null;
 
@@ -480,15 +468,12 @@ public class TalkPlusSample : MonoBehaviour
         }, (int statusCode, Exception e) => { });
     }
 
-    void ScrollToBottom()
-    {
+    void ScrollToBottom() {
         scrollbar.value = 0;
     }
 
-    void OnMessageReceived(object sender, TPChannelMessageArgs args)
-    {
-        if (args.tpChannel.GetChannelId().Equals(channel.GetChannelId()))
-        {
+    void OnMessageReceived(object sender, TPChannelMessageArgs args) {
+        if (args.tpChannel.GetChannelId().Equals(channel.GetChannelId())) {
             AddMessage(args.tpMessage);
         }
     }
@@ -496,12 +481,10 @@ public class TalkPlusSample : MonoBehaviour
     #endregion
 
     #region Menu
-    void ShowMenuPopup(bool isShow)
-    {
+    void ShowMenuPopup(bool isShow) {
         menuPopup.SetActive(isShow);
 
-        if (isShow)
-        {
+        if (isShow) {
             menuTitleText.text = "Menu";
             menuPanel.SetActive(true);
             invitePanel.SetActive(false);
@@ -510,8 +493,7 @@ public class TalkPlusSample : MonoBehaviour
         }
     }
 
-    void SetMenuType(MENU_TYPE type)
-    {
+    void SetMenuType(MENU_TYPE type) {
         menuType = type;
 
         channelIdInputField.text = null;
@@ -524,8 +506,7 @@ public class TalkPlusSample : MonoBehaviour
         menuPanel.SetActive(false);
         invitePanel.SetActive(true);
 
-        switch (type)
-        {
+        switch (type) {
             case MENU_TYPE.PRIVATE:
                 menuTitleText.text = "Create Private Channel";
                 channelIdInputField.gameObject.SetActive(false);
@@ -573,8 +554,7 @@ public class TalkPlusSample : MonoBehaviour
         }
     }
 
-    void CreateChannel(string channelType)
-    {
+    void CreateChannel(string channelType) {
         List<string> userIds = new List<string>();
 
         string userId1 = userId1InputField.text;
@@ -582,8 +562,7 @@ public class TalkPlusSample : MonoBehaviour
         string userId3 = userId3InputField.text;
         string invitationCode = codeInputField.text ?? null;
 
-        if (channelType.Equals(TPChannel.TYPE_INVITATION_ONLY) && string.IsNullOrEmpty(invitationCode))
-        {
+        if (channelType.Equals(TPChannel.TYPE_INVITATION_ONLY) && string.IsNullOrEmpty(invitationCode)) {
             return;
         }
 
@@ -591,36 +570,27 @@ public class TalkPlusSample : MonoBehaviour
         if (!string.IsNullOrEmpty(userId2)) { userIds.Add(userId2); }
         if (!string.IsNullOrEmpty(userId3)) { userIds.Add(userId3); }
 
-        if (userIds.Count > 0)
-        {
-            TalkPlusApi.CreateChannel(userIds, null, true, 20, false, channelType, null, invitationCode, null, null, (TPChannel tpChannel) =>
-            {
+        if (userIds.Count > 0) {
+            TalkPlusApi.CreateChannel(userIds, null, true, 20, false, channelType, null, invitationCode, null, null, (TPChannel tpChannel) => {
                 SetActivePanel(PANEL_TYPE.MAIN);
 
             }, (int statusCode, Exception e) => { });
         }
     }
 
-    void JoinChannel()
-    {
+    void JoinChannel() {
         string channelId = channelIdInputField.text;
         string invitationCode = codeInputField.text;
 
-        if (!string.IsNullOrEmpty(channelId))
-        {
-            if (!string.IsNullOrEmpty(invitationCode))
-            {
-                TalkPlusApi.JoinChannel(channelId, invitationCode, (TPChannel tpChannel) =>
-                {
+        if (!string.IsNullOrEmpty(channelId)) {
+            if (!string.IsNullOrEmpty(invitationCode)) {
+                TalkPlusApi.JoinChannel(channelId, invitationCode, (TPChannel tpChannel) => {
                     SetActivePanel(PANEL_TYPE.CHANNEL);
                     ShowChannel(tpChannel);
 
                 }, (int statusCode, Exception e) => { });
-            }
-            else
-            {
-                TalkPlusApi.JoinChannel(channelId, (TPChannel tpChannel) =>
-                {
+            } else {
+                TalkPlusApi.JoinChannel(channelId, (TPChannel tpChannel) => {
                     SetActivePanel(PANEL_TYPE.CHANNEL);
                     ShowChannel(tpChannel);
 
@@ -632,11 +602,9 @@ public class TalkPlusSample : MonoBehaviour
     #endregion
 
     #region Common
-    string GetAttendees(TPChannel tpChannel)
-    {
+    string GetAttendees(TPChannel tpChannel) {
         List<TPUser> users = tpChannel.GetMembers();
-        if (users != null && users.Count > 0)
-        {
+        if (users != null && users.Count > 0) {
             List<string> names = new List<string>();
             users.ForEach((TPUser user) => { names.Add(user.GetUsername()); });
             string attendees = string.Join(", ", names);
@@ -647,16 +615,12 @@ public class TalkPlusSample : MonoBehaviour
         return null;
     }
 
-    string GetFormattedTime(long milliseconds)
-    {
-        if (milliseconds > 0)
-        {
+    string GetFormattedTime(long milliseconds) {
+        if (milliseconds > 0) {
             DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             DateTime date = start.AddMilliseconds(milliseconds).ToLocalTime();
             return string.Format("{0:yyyy/MM/dd HH:mm}", date);
-        }
-        else
-        {
+        } else {
             return null;
         }
     }
@@ -664,46 +628,36 @@ public class TalkPlusSample : MonoBehaviour
 
 #if FIREBASE_MESSAGING
     #region Firebase
-    void InitializeFirebase()
-    {
-        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
-        {
+    void InitializeFirebase() {
+        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task => {
             var dependencyStatus = task.Result;
-            if (dependencyStatus == DependencyStatus.Available)
-            {
+            if (dependencyStatus == DependencyStatus.Available) {
                 app = FirebaseApp.DefaultInstance;
                 FirebaseMessaging.TokenReceived += OnTokenReceived;
                 FirebaseMessaging.MessageReceived += OnMessageReceived;
-            }
-            else
-            {
+            } else {
                 Debug.Log("Could not resolve all Firebase dependencies: " + dependencyStatus);
             }
         });
     }
 
-    void RegisterFCMToken()
-    {
+    void RegisterFCMToken() {
         string fcmToken = PlayerPrefs.GetString(KEY_FCM_TOKEN);
 
-        if (!string.IsNullOrEmpty(fcmToken))
-        {
+        if (!string.IsNullOrEmpty(fcmToken)) {
             TalkPlusApi.RegisterFCMToken(fcmToken, () => {
-          
+
             }, (errorCode, error) => { });
         }
     }
 
-    public static void OnTokenReceived(object sender, TokenReceivedEventArgs token)
-    {
+    public static void OnTokenReceived(object sender, TokenReceivedEventArgs token) {
         string fcmToken = token.Token;
         PlayerPrefs.SetString(KEY_FCM_TOKEN, fcmToken);
     }
 
-    public static void OnMessageReceived(object sender, MessageReceivedEventArgs e)
-    {
-        if (e.Message.Data.ContainsKey("talkplus"))
-        {
+    public static void OnMessageReceived(object sender, MessageReceivedEventArgs e) {
+        if (e.Message.Data.ContainsKey("talkplus")) {
             TalkPlusApi.ProcessFirebaseCloudMessagingData(e.Message.Data);
         }
     }

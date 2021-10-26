@@ -7,4 +7,5 @@ public class ListItem : MonoBehaviour
     public Text messageText;
     public Text dateText;
     public Text unreadCountText;
+    public RawImage fileImage;
 }
