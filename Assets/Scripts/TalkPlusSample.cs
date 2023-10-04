@@ -438,22 +438,18 @@ public class TalkPlusSample : MonoBehaviour {
     void SendFileMessage() {
         string filePath = Application.dataPath + "/Resources/logo.png";
         string message = messageInputField.text;
-
-        TalkPlusApi.SendFileMessage(channel, message, TPMessage.TYPE_TEXT, null, filePath, (TPMessage tpMessage) => {
+        TalkPlusApi.SendFileMessage(channel, message, TPMessage.TYPE_TEXT, null, "", null, filePath, (TPMessage tpMessage) => {
             messageInputField.text = null;
             AddMessage(tpMessage);
-
         }, (int statusCode, Exception e) => { });
     }
 
     void SendMessage() {
         string message = messageInputField.text;
-
         if (!string.IsNullOrEmpty(message)) {
-            TalkPlusApi.SendMessage(channel, message, TPMessage.TYPE_TEXT, null, (TPMessage tpMessage) => {
+            TalkPlusApi.SendMessage(channel, message, TPMessage.TYPE_TEXT, null, "", null, (TPMessage tpMessage) => {
                 messageInputField.text = null;
                 AddMessage(tpMessage);
-
             }, (int statusCode, Exception e) => { });
         }
     }
@@ -571,7 +567,7 @@ public class TalkPlusSample : MonoBehaviour {
         if (!string.IsNullOrEmpty(userId3)) { userIds.Add(userId3); }
 
         if (userIds.Count > 0) {
-            TalkPlusApi.CreateChannel(userIds, null, true, 20, false, channelType, null, invitationCode, null, null, (TPChannel tpChannel) => {
+            TalkPlusApi.CreateChannel(userIds, null, true, 20, false, channelType, null, invitationCode, null, null, null, null, (TPChannel tpChannel) => {
                 SetActivePanel(PANEL_TYPE.MAIN);
 
             }, (int statusCode, Exception e) => { });
@@ -603,15 +599,13 @@ public class TalkPlusSample : MonoBehaviour {
 
     #region Common
     string GetAttendees(TPChannel tpChannel) {
-        List<TPUser> users = tpChannel.GetMembers();
+        List<TPMember> users = tpChannel.GetMembers();
         if (users != null && users.Count > 0) {
             List<string> names = new List<string>();
-            users.ForEach((TPUser user) => { names.Add(user.GetUsername()); });
+            users.ForEach((TPMember user) => { names.Add(user.GetUsername()); });
             string attendees = string.Join(", ", names);
-
             return attendees;
         }
-
         return null;
     }
 
