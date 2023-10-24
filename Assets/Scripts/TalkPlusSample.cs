@@ -284,13 +284,19 @@ public class TalkPlusSample : MonoBehaviour {
     #endregion
 
     #region Main
-    void GetChannelList(TPChannel lastChannel = null) {
-        if (lastChannel == null) {
+    void GetChannelList(TPChannel lastChannel = null, List<TPChannel> tpChannelList = null) {
+        if (tpChannelList == null){
+            tpChannelList = new List<TPChannel>();
             ResetChannelList();
         }
 
-        TalkPlusApi.GetChannelList(lastChannel, (List<TPChannel> tpChannels) => {
-            foreach (TPChannel tpChannel in tpChannels) {
+        TalkPlusApi.GetChannels(lastChannel, (List<TPChannel> tpChannels, bool hasNext) => {
+            tpChannelList.AddRange(tpChannels);
+            if (hasNext){
+                GetChannelList(tpChannels[tpChannels.Count-1], tpChannelList);
+                return;
+            }
+            foreach (TPChannel tpChannel in tpChannelList){
                 GameObject channelObject = Instantiate(channelItemPrefab, mainContent.transform) as GameObject;
                 ListItem channelItem = channelObject.GetComponent<ListItem>();
 
@@ -298,29 +304,25 @@ public class TalkPlusSample : MonoBehaviour {
                 channelItem.userText.text = "참여자: " + usersText;
 
                 TPMessage message = tpChannel.GetLastMessage();
-                if (message != null && message.GetText().Length > 0) {
+                if (message != null && message.GetText().Length > 0){
                     channelItem.messageText.text = message.GetText();
                     long createAt = message.GetCreatedAt();
                     string date = GetFormattedTime(createAt);
                     channelItem.dateText.text = "date: " + date;
-                } else {
+                }else{
                     channelItem.messageText.text = "no message";
                     channelItem.dateText.text = "date: ";
                 }
-
                 string unreadCount = "unread Count: " + tpChannel.GetUnreadCount().ToString();
                 channelItem.unreadCountText.text = unreadCount;
                 channelList.Add(channelObject);
-
                 channelObject.GetComponent<Button>().onClick.AddListener(() => {
                     ResetChannelList();
                     SetActivePanel(PANEL_TYPE.CHANNEL);
                     ShowChannel(tpChannel);
                 });
-
                 LayoutRebuilder.ForceRebuildLayoutImmediate(mainContent);
             }
-
         }, (int statusCode, Exception e) => { });
     }
 
@@ -354,6 +356,12 @@ public class TalkPlusSample : MonoBehaviour {
 
         MarkRead();
         GetMessageList();
+
+        TalkPlusApi.GetMutedPeers(channel, null, (List<TPMember> tpMessages, bool hasNext) => {
+            Debug.Log($"GetMutedPeers: {tpMessages}, hasNext:{hasNext}");
+        }, (int statusCode, Exception e) => {
+
+        });
     }
 
     void MarkRead() {
@@ -363,21 +371,29 @@ public class TalkPlusSample : MonoBehaviour {
         }, (int statusCode, Exception e) => { });
     }
 
-    void GetMessageList(TPMessage lastMessage = null) {
-        if (channel != null) {
-            if (lastMessage == null) {
-                ResetMessageList();
-            }
-
-            TalkPlusApi.GetMessageList(channel, lastMessage, (List<TPMessage> tpMessages) => {
-                if (tpMessages != null && tpMessages.Count > 0) {
-                    tpMessages.Reverse();
-                    foreach (TPMessage tpMessage in tpMessages) { AddMessageToList(tpMessage); }
-
-                    Invoke(nameof(ScrollToBottom), 0.05f);
-                }
-            }, (int statusCode, Exception e) => { });
+    void GetMessageList(TPMessage lastMessage = null, List<TPMessage> messageList = null) {
+        if (channel == null) { return; }
+        if (messageList == null) {
+            messageList = new List<TPMessage>();
+            ResetMessageList();
         }
+
+        TalkPlusApi.GetMessages(channel, lastMessage, (List<TPMessage> tpMessages, bool hasNext) => {
+            messageList.AddRange(tpMessages);
+            if (hasNext){
+                GetMessageList(tpMessages[tpMessages.Count-1], messageList);
+                return;
+            }
+            if (messageList.Count > 0){
+                messageList.Reverse();
+                foreach (TPMessage tpMessage in messageList) {
+                    AddMessageToList(tpMessage);
+                }
+                Invoke(nameof(ScrollToBottom), 0.05f);
+            }
+        }, (int statusCode, Exception e) => {
+
+        });
     }
 
     void ResetMessageList() {
