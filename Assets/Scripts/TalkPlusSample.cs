@@ -266,7 +266,10 @@ public class TalkPlusSample : MonoBehaviour {
 
     void Login(string userId, string userName) {
         if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userName)) {
-            TalkPlusApi.LoginWithAnonymous(userId, userName, null, null, (TPUser tpUser) => {
+            var loginParams = new TPLoginParams(TPLoginType.TPLoginAnonymous, userId);
+            loginParams.userName = userName;
+            //loginParams.translationLanguage = "ko";
+            TalkPlusApi.Login(loginParams, (TPUser tpUser) => {
                 if (tpUser != null) {
 #if FIREBASE_MESSAGING
                     RegisterFCMToken();
@@ -378,7 +381,11 @@ public class TalkPlusSample : MonoBehaviour {
             ResetMessageList();
         }
 
-        TalkPlusApi.GetMessages(channel, lastMessage, (List<TPMessage> tpMessages, bool hasNext) => {
+        var messageParams = new TPMessageRetrievalParams(channel);
+        messageParams.lastMessage = lastMessage;
+        //messageParams.translationLanguage = "ko";
+
+        TalkPlusApi.GetMessages(messageParams, (List<TPMessage> tpMessages, bool hasNext) => {
             messageList.AddRange(tpMessages);
             if (hasNext){
                 GetMessageList(tpMessages[tpMessages.Count-1], messageList);
