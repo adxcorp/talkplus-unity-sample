@@ -461,7 +461,10 @@ public class TalkPlusSample : MonoBehaviour {
     void SendFileMessage() {
         string filePath = Application.dataPath + "/Resources/logo.png";
         string message = messageInputField.text;
-        TalkPlusApi.SendFileMessage(channel, message, TPMessage.TYPE_TEXT, null, "", null, filePath, (TPMessage tpMessage) => {
+        var sendParams = new TPMessageSendParams(channel, TPMessageType.TPMessageText, TPMessageContentType.TPMessageContentFile);
+        sendParams.textMessage = message;
+        sendParams.filePath = filePath;
+        TalkPlusApi.SendMessage(sendParams, (TPMessage tpMessage) => {
             messageInputField.text = null;
             AddMessage(tpMessage);
         }, (int statusCode, Exception e) => { });
@@ -470,7 +473,9 @@ public class TalkPlusSample : MonoBehaviour {
     void SendMessage() {
         string message = messageInputField.text;
         if (!string.IsNullOrEmpty(message)) {
-            TalkPlusApi.SendMessage(channel, message, TPMessage.TYPE_TEXT, null, "", null, (TPMessage tpMessage) => {
+            var sendParams = new TPMessageSendParams(channel, TPMessageType.TPMessageText, TPMessageContentType.TPMessageContentText);
+            sendParams.textMessage = message;
+            TalkPlusApi.SendMessage(sendParams, (TPMessage tpMessage) => {
                 messageInputField.text = null;
                 AddMessage(tpMessage);
             }, (int statusCode, Exception e) => { });
