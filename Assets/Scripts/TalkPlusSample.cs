@@ -294,11 +294,9 @@ public class TalkPlusSample : MonoBehaviour {
         }
 
         TalkPlusApi.GetChannels(lastChannel, (List<TPChannel> tpChannels, bool hasNext) => {
+
             tpChannelList.AddRange(tpChannels);
-            if (hasNext){
-                GetChannelList(tpChannels[tpChannels.Count-1], tpChannelList);
-                return;
-            }
+
             foreach (TPChannel tpChannel in tpChannelList){
                 GameObject channelObject = Instantiate(channelItemPrefab, mainContent.transform) as GameObject;
                 ListItem channelItem = channelObject.GetComponent<ListItem>();
@@ -383,14 +381,11 @@ public class TalkPlusSample : MonoBehaviour {
 
         var messageParams = new TPMessageRetrievalParams(channel);
         messageParams.lastMessage = lastMessage;
+        messageParams.orderBy = TPMessageOrderBy.TPOrderByLatest;
         //messageParams.translationLanguage = "ko";
 
         TalkPlusApi.GetMessages(messageParams, (List<TPMessage> tpMessages, bool hasNext) => {
             messageList.AddRange(tpMessages);
-            if (hasNext){
-                GetMessageList(tpMessages[tpMessages.Count-1], messageList);
-                return;
-            }
             if (messageList.Count > 0){
                 messageList.Reverse();
                 foreach (TPMessage tpMessage in messageList) {
