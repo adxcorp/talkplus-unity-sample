@@ -582,6 +582,7 @@ public class TalkPlusSample : MonoBehaviour {
         string invitationCode = codeInputField.text ?? null;
 
         if (channelType.Equals(TPChannel.TYPE_INVITATION_ONLY) && string.IsNullOrEmpty(invitationCode)) {
+            // Invitation code must not be null or empty for the this channel type.
             return;
         }
 
@@ -589,12 +590,41 @@ public class TalkPlusSample : MonoBehaviour {
         if (!string.IsNullOrEmpty(userId2)) { userIds.Add(userId2); }
         if (!string.IsNullOrEmpty(userId3)) { userIds.Add(userId3); }
 
-        if (userIds.Count > 0) {
-            TalkPlusApi.CreateChannel(userIds, null, true, 20, false, channelType, null, invitationCode, null, null, null, null, (TPChannel tpChannel) => {
-                SetActivePanel(PANEL_TYPE.MAIN);
-
-            }, (int statusCode, Exception e) => { });
+        if (userIds.Count <= 0) {
+            return;
         }
+
+        var newChannelParams = new TPChannelCreateParams(GetNewChannelType(channelType));
+        newChannelParams.targetIds = userIds;
+        newChannelParams.invitationCode = invitationCode;
+        newChannelParams.maxMemberCount = 20;
+        newChannelParams.reuseChannel = true;
+        newChannelParams.hideMessagesBeforeJoin = false;
+
+        TalkPlusApi.CreateChannel(newChannelParams, (TPChannel tpChannel) => {
+            Debug.Log($"Channel successfully has created. Channel Id: {tpChannel.GetChannelId()}");
+            SetActivePanel(PANEL_TYPE.MAIN);
+        }, (int statusCode, Exception e) => {
+            Debug.Log($"statusCode: {statusCode}, exception: {e}");
+        });
+    }
+
+    TPChannelCreateType GetNewChannelType(string channelType)
+    {
+        var newChannelType = TPChannelCreateType.TPChannelUnknown;
+        if (channelType.Equals(TPChannel.TYPE_PRIVATE)){
+            newChannelType = TPChannelCreateType.TPChannelPrivate;
+        } else if (channelType.Equals(TPChannel.TYPE_PUBLIC)) {
+            newChannelType = TPChannelCreateType.TPChannelPublic;
+        } else if (channelType.Equals(TPChannel.TYPE_SUPER_PRIVATE)) {
+            newChannelType = TPChannelCreateType.TPChannelSuperPrivate;
+        } else if (channelType.Equals(TPChannel.TYPE_SUPER_PUBLIC)) {
+            newChannelType = TPChannelCreateType.TPChannelSuperPublic;
+        } else if (channelType.Equals(TPChannel.TYPE_INVITATION_ONLY)) {
+            newChannelType = TPChannelCreateType.TPChannelInvitationOnly;
+        }
+        
+        return newChannelType;
     }
 
     void JoinChannel() {
